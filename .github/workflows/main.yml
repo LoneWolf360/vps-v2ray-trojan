@@ -1,46 +1,43 @@
-{
-  "inbounds": [],
-  "outbounds": [
-    {
-      "mux": {
-        "enabled": false
-      },
-      "protocol": "trojan",
-      "settings": {
-        "servers": [
+name: Deploy Trojan VPN
+
+on: [push, workflow_dispatch]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up environment
+        run: |
+          sudo apt update
+          sudo apt install -y trojan
+
+      - name: Create Trojan configuration
+        run: |
+          cat > /etc/trojan/config.json <<EOF
           {
-            "address": "cdn-tanzania.marmot-cloud.com", 
-            "port": 443,
-            "password": "e84854ab-9bd9-46e8-a968-d92d06cc69bb", 
-            "level": 8
+            "run_type": "server",
+            "local_addr": "0.0.0.0",
+            "local_port": 443,
+            "remote_addr": "cdn-tanzania.marmot-cloud.com",
+            "remote_port": 443,
+            "password": [
+              "e84854ab-9bd9-46e8-a968-d92d06cc69bb"
+            ],
+            "ssl": {
+              "cert": "/path/to/your/cert.pem",
+              "key": "/path/to/your/key.pem",
+              "sni": "cdn-tanzania.marmot-cloud.com"
+            },
+            "websocket": {
+              "enabled": true,
+              "path": "/trojan-ws",
+              "host": "alibaba.drivereurope.online"
+            }
           }
-        ]
-      },
-      "streamSettings": {
-        "network": "ws",
-        "security": "tls",
-        "tlsSettings": {
-          "allowInsecure": true,
-          "serverName": "cdn-tanzania.marmot-cloud.com"
-        },
-        "wsSettings": {
-          "path": "/trojan-ws",
-          "headers": {
-            "Host": "alibaba.drivereurope.online"
-          }
-        }
-      },
-      "tag": "TROJAN"
-    }
-  ],
-  "policy": {
-    "levels": {
-      "8": {
-        "connIdle": 300,
-        "downlinkOnly": 1,
-        "handshake": 4,
-        "uplinkOnly": 1
-      }
-    }
-  }
-}
+          EOF
+
+      - name: Start Trojan
+        run: sudo systemctl restart trojan
